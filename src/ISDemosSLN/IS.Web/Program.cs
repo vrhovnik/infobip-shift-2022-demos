@@ -9,10 +9,16 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
     .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"));
 builder.Services.Configure<StorageOption>(builder.Configuration.GetSection("StorageOptions"));
+builder.Services.Configure<KubekOptions>(builder.Configuration.GetSection("KubekOptions"));
 
 var storageOption = builder.Configuration.GetSection("StorageOptions").Get<StorageOption>();
 builder.Services.AddTransient<IStorageWorker, AzureStorageWorker>(_ =>
     new AzureStorageWorker(storageOption.ConnectionString, storageOption.Container));
+
+builder.Services.AddScoped<IKubernetesService, AksService>();
+builder.Services.AddScoped<IKubernetesObjects, AKSObjectsService>();
+builder.Services.AddScoped<IContainerRegistryService, ACRService>();
+builder.Services.AddScoped<IKubernetesCrud, AKSCrudService>();
 
 builder.Services.AddHealthChecks();
 builder.Services.AddRazorPages()
