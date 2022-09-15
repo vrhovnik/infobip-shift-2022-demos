@@ -1,4 +1,7 @@
-﻿using Spectre.Console;
+﻿using System.Diagnostics;
+using IS.REST;
+using Newtonsoft.Json;
+using Spectre.Console;
 
 Console.WriteLine("Calling REST to get back the information!");
 
@@ -19,14 +22,8 @@ if (string.IsNullOrEmpty(bearerToken))
     return;
 }
 
-var namespaceName = AnsiConsole.Ask("Provide namespace name to traverse through pods", string.Empty);
-
-if (string.IsNullOrEmpty(namespaceName))
-{
-    AnsiConsole.WriteLine("Namespace was not provided, continuing with default namespace");
-    namespaceName = "default";
-}
-
+var namespaceName = AnsiConsole.Ask<string>("Provide [green]namespace[/] name to traverse through pods", "default");
+AnsiConsole.MarkupLine("Your defined: [yellow]{0}[/]", namespaceName);
 var requestData = new HttpRequestMessage
 {
     Method = HttpMethod.Get,
@@ -41,5 +38,40 @@ if (!result.IsSuccessStatusCode)
     AnsiConsole.WriteLine(result.ReasonPhrase);
     return;
 }
-var pods = await result.Content.ReadAsStringAsync();
-AnsiConsole.WriteLine(pods);
+
+var podsJson = await result.Content.ReadAsStringAsync();
+Debug.WriteLine("Pods in JSON format: " + podsJson);
+
+var pods = JsonConvert.DeserializeObject<Pods>(podsJson);
+if (pods == null)
+{
+    AnsiConsole.WriteException(new NotSupportedException("Json is not in the right format. Check return value"));
+    return;
+}
+
+var table = new Table();
+table.Border(TableBorder.Ascii2);
+
+table.AddColumn(new TableColumn("Pod name").Centered());
+table.AddColumn(new TableColumn("Container used").Centered());
+
+foreach (var pod in pods.Items)
+{
+    var containerDetails = "";
+    foreach (var specContainer in pod.Spec.Containers)
+    {
+        containerDetails += $"{specContainer.Image}{Environment.NewLine}";
+        if (specContainer.Ports != null)
+        {
+            foreach (var specContainerPort in specContainer.Ports)
+            {
+                containerDetails +=
+                    $"accessible via {specContainerPort.Protocol} via port {specContainerPort.ContainerPort}{Environment.NewLine}";
+            }
+        }
+    }
+
+    table.AddRow(pod.Metadata.Name, containerDetails);
+}
+
+AnsiConsole.Write(table);

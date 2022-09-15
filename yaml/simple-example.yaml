@@ -1,0 +1,44 @@
+﻿apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ttaweb
+  labels:
+    app: tta
+    conf: InfobipShift
+    type: web
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: tta
+      conf: InfobipShift
+      type: web
+  template:
+    metadata:
+      labels:
+        app: tta
+        conf: InfobipShift
+        type: web
+    spec:
+      containers:
+        - name: ttaweb
+          image: csacoreimages.azurecr.io/tta/web:1.0
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ttaweb-service
+  labels:
+    app: tta
+    conf: InfobipShift
+    type: svc
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80
+  selector:
+    app: tta
+    conf: InfobipShift
+    type: web
