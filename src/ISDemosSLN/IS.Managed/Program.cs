@@ -1,4 +1,5 @@
-﻿using Bogus;using IS.Managed;
+﻿using Bogus;
+using IS.Managed;
 using k8s;
 using Spectre.Console;
 
@@ -30,7 +31,7 @@ if (!AnsiConsole.Confirm($"Delete namespace {nsName}?")) await namespaceOps.Dele
 
 HorizontalRule("02 - workloads operations");
 
- var workloadOps = new WorkloadOperations(client);
+var workloadOps = new WorkloadOperations(client);
 
 var namespaceList = await namespaceOps.GetNamespacesAsync();
 var namespaceToCheckPods = AnsiConsole.Prompt(
@@ -59,10 +60,8 @@ await workloadOps.GetPodsWithWatchEnabledAsync(namespaceToCheckPods);
 //return back here and press CTRL + C to continue
 
 HorizontalRule("04 - load yaml and do modifications");
-
-await workloadOps.LoadYamlOutputDataAsync();
-
-
+var checkAndRunResources = AnsiConsole.Ask<bool>("Read and create [green]resources[/]?", false);
+await workloadOps.LoadYamlOutputDataAsync(checkAndRunResources);
 
 void HorizontalRule(string title)
 {
