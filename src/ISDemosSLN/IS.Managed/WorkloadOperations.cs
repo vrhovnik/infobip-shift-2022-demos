@@ -2,6 +2,10 @@
 using k8s;
 using k8s.Models;
 using Spectre.Console;
+using System;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
 
 namespace IS.Managed;
 
@@ -29,6 +33,89 @@ public class WorkloadOperations : BaseKubernetesOps
         }
     }
 
+    public async Task ExecIntoPodAsync(V1Pod pod, string commandToExecute = "ls", string namespaceName = "default")
+    {
+        var webSocket =
+            await client.WebSocketNamespacedPodExecAsync(pod.Metadata.Name, namespaceName, commandToExecute,
+                pod.Spec.Containers[0].Name).ConfigureAwait(false);
+
+        var demux = new StreamDemuxer(webSocket);
+        demux.Start();
+
+        var buff = new byte[4096];
+        var stream = demux.GetStream(1, 1);
+        await stream.ReadAsync(buff.AsMemory(0, 4096));
+        AnsiConsole.WriteLine($"Output from pod {pod.Metadata.Name}:");
+        var str = Encoding.Default.GetString(buff);
+        AnsiConsole.WriteLine(str);
+    }
+
+    public async Task PortforwardToPodAsync(V1Pod pod, string namespaceName = "default")
+    {
+        var webSocket = await client.WebSocketNamespacedPodPortForwardAsync(pod.Metadata.Name,
+            namespaceName,
+            new[] { 80 }, "v4.channel.k8s.io");
+        var demux = new StreamDemuxer(webSocket, StreamType.PortForward);
+        demux.Start();
+
+        var stream = demux.GetStream((byte?)0, (byte?)0);
+
+        var ipAddress = IPAddress.Loopback;
+        var localEndPoint = new IPEndPoint(ipAddress, 8080);
+        var listener = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+
+        listener.Bind(localEndPoint);
+        listener.Listen(100);
+
+        Socket handler = null;
+
+        var accept = Task.Run(() =>
+        {
+            while (true)
+            {
+                handler = listener.Accept();
+                var bytes = new byte[4096];
+                while (true)
+                {
+                    var bytesRec = handler.Receive(bytes);
+                    stream.Write(bytes, 0, bytesRec);
+                    if (bytesRec == 0 || Encoding.ASCII.GetString(bytes, 0, bytesRec).IndexOf("<EOF>") > -1)
+                        break;
+                }
+            }
+        });
+
+        var copy = Task.Run(() =>
+        {
+            var buff = new byte[4096];
+            while (true)
+            {
+                var read = stream.Read(buff, 0, 4096);
+                handler.Send(buff, read, 0);
+            }
+        });
+
+        await accept;
+        await copy;
+
+        handler?.Close();
+        listener.Close();
+    }
+
+    public async Task<V1Pod> GetV1PodAsync(string name, string namespaceName = "default")
+    {
+        try
+        {
+            return await client.CoreV1.ReadNamespacedPodAsync(name, namespaceName);
+        }
+        catch (Exception e)
+        {
+            AnsiConsole.WriteException(e);
+        }
+
+        return null;
+    }
+
     public async Task LoadYamlOutputDataAsync(bool execute = false)
     {
         var filePath = Environment.GetEnvironmentVariable("YAMLPATH") ??
@@ -39,7 +126,7 @@ public class WorkloadOperations : BaseKubernetesOps
             AnsiConsole.WriteException(new DirectoryNotFoundException("That path is not a directory"));
             return;
         }
-        
+
         AnsiConsole.WriteLine("YAML file directory:");
         AnsiConsole.Write(new TextPath(filePath)
             .RootStyle(new Style(foreground: Color.Red))
@@ -63,8 +150,21 @@ public class WorkloadOperations : BaseKubernetesOps
             AnsiConsole.WriteLine(obj.ToString());
             if (execute)
             {
-                if (obj is V1Service service)
-                    await client.CoreV1.CreateNamespacedServiceAsync(service, "default");
+                switch (obj)
+                {
+                    case V1Service service:
+                        await client.CoreV1.CreateNamespacedServiceAsync(service, "default");
+                        break;
+                    case V1Pod pod:
+                        await client.CoreV1.CreateNamespacedPodAsync(pod, "default");
+                        break;
+                    case V1Deployment deployment:
+                        //change connection string environment variable
+                        deployment.Spec.Template.Spec.Containers[0].Env[0].Value =
+                            Environment.GetEnvironmentVariable("PRODUCTIONSQLCONNSTRING");
+                        await client.AppsV1.CreateNamespacedDeploymentAsync(deployment, "default");
+                        break;
+                }
             }
         }
     }

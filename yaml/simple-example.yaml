@@ -23,6 +23,9 @@ spec:
       containers:
         - name: ttaweb
           image: csacoreimages.azurecr.io/tta/web:1.0
+          env:
+            - name: SQLOPTIONS__CONNECTIONSTRING
+              value: ""
           ports:
             - containerPort: 80
 ---

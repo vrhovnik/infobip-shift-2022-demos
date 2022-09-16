@@ -17,7 +17,7 @@ public class StorePageModel : PageModel
 
     public void OnGet()
     {
-        logger.LogInformation("Loaded scenario {0}", DateTime.Now);
+        logger.LogInformation("Loaded scenario {DateLoaded}", DateTime.Now);
     }
 
     public async Task<RedirectToPageResult> OnPostCreateScenarioAsync()
@@ -27,10 +27,10 @@ public class StorePageModel : PageModel
             InfoText = "Name is required!";
             return RedirectToPage("/Kubek/Store");
         }
-        logger.LogInformation("Creating scenario");
+        logger.LogInformation("Creating scenario at {DateCreated}", DateTime.Now);
         StoreIp = await kubernetesCrud.CreateScenarioAsync(NamespaceName);
         StoreIp = $"http://{StoreIp}";
-        logger.LogInformation($"Finished scenario, IP is {StoreIp}");
+        logger.LogInformation("Finished scenario, IP is {StoreIp}",StoreIp);
         return RedirectToPage("/Kubek/Store");
     }
         
@@ -41,11 +41,11 @@ public class StorePageModel : PageModel
             InfoText = "Name is required!";
             return RedirectToPage("/Kubek/Store");
         }
-        logger.LogInformation("Deleting scenario");
+        logger.LogInformation("Deleting scenario - the whole namespace {NamespaceName}", NamespaceName);
         await kubernetesCrud.DeleteScenarioAsync(NamespaceName);
-        logger.LogInformation("Finish deleting scenario");
-        InfoText = "Scenario has been deleted";
-        return RedirectToPage("/Kubek/Store");
+        logger.LogInformation("Finish deleting scenario at {DateDeleted}", DateTime.Now);
+        InfoText = "Scenario has been deleted, check";
+        return RedirectToPage("/Kubek/ListNamespaces");
     }
 
     [BindProperty] public string NamespaceName { get; set; }

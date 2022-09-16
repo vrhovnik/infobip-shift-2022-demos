@@ -17,7 +17,7 @@ public class AKSCrudService : IKubernetesCrud
 
     public async Task<bool> CreateNamespaceAsync(string name)
     {
-        logger.LogInformation("Getting cluster information to authenticate");
+        logger.LogInformation("Getting cluster information to authenticate at {DateLoaded}", DateTime.Now);
         var kubernetes = await client.LoadConfigurationAsync();
         logger.LogInformation("Creating namespace {NamespaceName}", name);
 

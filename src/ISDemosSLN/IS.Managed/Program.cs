@@ -60,8 +60,33 @@ await workloadOps.GetPodsWithWatchEnabledAsync(namespaceToCheckPods);
 //return back here and press CTRL + C to continue
 
 HorizontalRule("04 - load yaml and do modifications");
-var checkAndRunResources = AnsiConsole.Ask<bool>("Read and create [green]resources[/]?", false);
+var checkAndRunResources = AnsiConsole.Ask("Read and create [green]resources[/]?", false);
 await workloadOps.LoadYamlOutputDataAsync(checkAndRunResources);
+
+HorizontalRule("05 - exec into POD");
+
+var podNameToExecInto = "simple-web-app";
+await workloadOps.CreatePodAsync(podNameToExecInto, "csacoreimages.azurecr.io/tta/web:1.0",
+    new Dictionary<string, string> { { "app", "cli" }, { "conf", "InfobipShift" }, { "type", "pods" } });
+
+var podToExecInto = await workloadOps.GetV1PodAsync(podNameToExecInto);
+AnsiConsole.WriteLine($"Read pod {podToExecInto.Metadata.Name}");
+
+await workloadOps.ExecIntoPodAsync(podToExecInto);
+
+AnsiConsole.WriteLine("Port forward to a pod - press key to continue");
+Console.Read();
+
+HorizontalRule("06 - do port forwarding to a pod");
+await workloadOps.PortforwardToPodAsync(podToExecInto);
+
+AnsiConsole.WriteLine("Get metrics - Press any key to continue");
+Console.Read();
+
+HorizontalRule("07 - get metrics for node and pods");
+
+await workloadOps.GetNodesMetricsAsync();
+await workloadOps.GetPodsMetricsAsync();
 
 void HorizontalRule(string title)
 {
