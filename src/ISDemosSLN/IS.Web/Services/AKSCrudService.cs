@@ -1,9 +1,12 @@
+using Azure;
+using Azure.Identity;
+using Azure.ResourceManager;
+using Azure.ResourceManager.Network;
+using Azure.ResourceManager.Network.Models;
 using IS.Web.Interfaces;
 using IS.Web.Options;
 using k8s;
 using k8s.Models;
-using Microsoft.Azure.Management.Fluent;
-using Microsoft.Azure.Management.ResourceManager.Fluent;
 using Microsoft.Extensions.Options;
 
 namespace IS.Web.Services;
@@ -12,24 +15,17 @@ public class AKSCrudService : IKubernetesCrud
 {
     private readonly IKubernetesService client;
     private readonly ILogger<AKSCrudService> logger;
-    private readonly IAzure azure;
+    private readonly ArmClient azure;
     private readonly AzureAdOptions azureAdOptions;
-    
+
     public AKSCrudService(IKubernetesService client, IOptions<AzureAdOptions> azureAdOptionsValue,
         ILogger<AKSCrudService> logger)
     {
         this.client = client;
         this.logger = logger;
         azureAdOptions = azureAdOptionsValue.Value;
-
-        var credentials = SdkContext.AzureCredentialsFactory
-            .FromServicePrincipal(azureAdOptions.ClientId, azureAdOptions.ClientSecret,
-                azureAdOptions.TenantId, AzureEnvironment.AzureGlobalCloud);
-
-        azure = Microsoft.Azure.Management.Fluent.Azure
-            .Configure()
-            .Authenticate(credentials)
-            .WithSubscription(azureAdOptions.SubscriptionId);
+        azure = new ArmClient(new ClientSecretCredential(azureAdOptions.TenantId, azureAdOptions.ClientId,
+            azureAdOptions.ClientSecret));
     }
 
     public async Task<bool> CreateNamespaceAsync(string name)
@@ -201,27 +197,29 @@ public class AKSCrudService : IKubernetesCrud
         return string.Empty;
     }
 
-    public async Task<string> AssignDnsAsync(string uniqueDnsName, string ip,string rgName)
+    public async Task<string> AssignDnsAsync(string uniqueDnsName, string ip, string rgName)
     {
-        var ips = await azure.PublicIPAddresses.ListByResourceGroupAsync(rgName);
-        string ipId = string.Empty;
-        foreach (var publicIpAddress in ips)
+        var subscriptionResource = azure.GetDefaultSubscription();
+        var resourceGroup = subscriptionResource.GetResourceGroup(rgName).Value;
+        var publicIPAddressContainer = resourceGroup.GetPublicIPAddresses();
+        PublicIPAddressData ipAddress = null;
+        foreach (var publicIpAddress in publicIPAddressContainer)
         {
-            if (publicIpAddress.IPAddress == ip)
-                ipId = publicIpAddress.Id;
+            if (publicIpAddress.Data.IPAddress == ip) ipAddress = publicIpAddress.Data;
         }
 
-        if (string.IsNullOrEmpty(ipId))
-            return string.Empty;
-        
+        if (ipAddress == null) return string.Empty;
+
+        ipAddress.DnsSettings = new PublicIPAddressDnsSettings
+        {
+            DomainNameLabel = uniqueDnsName
+        };
+
         try
         {
-            var currentIp = await azure.PublicIPAddresses.GetByIdAsync(ipId);
-            currentIp.Inner.DnsSettings.DomainNameLabel = uniqueDnsName;
-            currentIp.Update();
-        
-            currentIp= await azure.PublicIPAddresses.GetByIdAsync(ipId);
-            return currentIp.Fqdn;
+            await publicIPAddressContainer.CreateOrUpdateAsync(WaitUntil.Completed, ipAddress.Name, ipAddress);
+            var data = resourceGroup.GetPublicIPAddress(ipAddress.Name);//get refreshed version
+            return data.Value.HasData ? data.Value.Data.DnsSettings?.Fqdn : string.Empty; //return FQDN or empty string
         }
         catch (Exception e)
         {

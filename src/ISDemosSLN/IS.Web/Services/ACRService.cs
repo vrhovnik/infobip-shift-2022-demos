@@ -1,19 +1,19 @@
+using Azure.Identity;
+using Azure.ResourceManager;
+using Azure.ResourceManager.ContainerRegistry;
 using Docker.DotNet;
 using Docker.DotNet.BasicAuth;
 using Docker.DotNet.Models;
 using IS.Web.Interfaces;
 using IS.Web.Models;
 using IS.Web.Options;
-using Microsoft.Azure.Management.ContainerRegistry.Fluent;
-using Microsoft.Azure.Management.Fluent;
-using Microsoft.Azure.Management.ResourceManager.Fluent;
 using Microsoft.Extensions.Options;
 
 namespace IS.Web.Services;
 
 public class ACRService : IContainerRegistryService
 {
-    private readonly IAzure azure;
+    private readonly ArmClient azure;
     private readonly AzureAdOptions azureAdOptions;
     private readonly ILogger<ACRService> logger;
 
@@ -22,24 +22,17 @@ public class ACRService : IContainerRegistryService
         this.logger = logger;
         azureAdOptions = azureAdOptionsValue.Value;
 
-        var credentials = SdkContext.AzureCredentialsFactory
-            .FromServicePrincipal(azureAdOptions.ClientId, azureAdOptions.ClientSecret,
-                azureAdOptions.TenantId, AzureEnvironment.AzureGlobalCloud);
-
-        azure = Microsoft.Azure.Management.Fluent.Azure
-            .Configure()
-            .Authenticate(credentials)
-            .WithSubscription(azureAdOptions.SubscriptionId);
+        azure = new ArmClient(new ClientSecretCredential(azureAdOptions.TenantId, azureAdOptions.ClientId,
+            azureAdOptions.ClientSecret));
     }
 
-    public async Task<IRegistry> GetRegistryRepositoriesAsync(string containerRegistryName)
+    public async Task<ContainerRegistryResource> GetRegistryRepositoriesAsync(string containerRegistryName)
     {
         logger.LogInformation("Retrieving info about registry {RegistryName}", containerRegistryName);
-        var registry =
-            await azure.ContainerRegistries.GetByResourceGroupAsync(azureAdOptions.AcrRG,
-                containerRegistryName);
+        var rg = await azure.GetDefaultSubscription().GetResourceGroupAsync(azureAdOptions.AcrRG);
+        var registry = rg.Value.GetContainerRegistry(containerRegistryName);
         logger.LogInformation("Registry info retrieved!");
-        return registry;
+        return registry.Value;
     }
 
     public async Task<List<DockerImageViewModel>> GetImagesForRepositoryAsync(string containerRegistryName)
@@ -53,9 +46,10 @@ public class ACRService : IContainerRegistryService
             var credRegistry = await registry.GetCredentialsAsync();
 
             var credentials =
-                new BasicAuthCredentials(credRegistry.Username, credRegistry.AccessKeys[AccessKeyType.Primary]);
+                new BasicAuthCredentials(credRegistry.Value.Username,
+                    credRegistry.Value.Passwords[0].Value);
 
-            using var client = new DockerClientConfiguration(new Uri(registry.LoginServerUrl), credentials)
+            using var client = new DockerClientConfiguration(new Uri(registry.Data.LoginServer), credentials)
                 .CreateClient();
 
             var listImages = await client.Images.ListImagesAsync(
