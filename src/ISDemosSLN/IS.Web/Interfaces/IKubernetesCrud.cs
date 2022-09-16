@@ -6,4 +6,5 @@ public interface IKubernetesCrud
     Task<bool> CreatePodAsync(string namespaceName,string podname, string image);
     Task<string> CreateScenarioAsync(string name);
     Task<bool> DeleteScenarioAsync(string name);
+    Task<string> AssignDnsAsync(string uniqueDnsName, string ip, string rgName);
 }

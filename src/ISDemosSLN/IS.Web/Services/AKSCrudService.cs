@@ -1,6 +1,10 @@
 using IS.Web.Interfaces;
+using IS.Web.Options;
 using k8s;
 using k8s.Models;
+using Microsoft.Azure.Management.Fluent;
+using Microsoft.Azure.Management.ResourceManager.Fluent;
+using Microsoft.Extensions.Options;
 
 namespace IS.Web.Services;
 
@@ -8,11 +12,24 @@ public class AKSCrudService : IKubernetesCrud
 {
     private readonly IKubernetesService client;
     private readonly ILogger<AKSCrudService> logger;
-
-    public AKSCrudService(IKubernetesService client, ILogger<AKSCrudService> logger)
+    private readonly IAzure azure;
+    private readonly AzureAdOptions azureAdOptions;
+    
+    public AKSCrudService(IKubernetesService client, IOptions<AzureAdOptions> azureAdOptionsValue,
+        ILogger<AKSCrudService> logger)
     {
         this.client = client;
         this.logger = logger;
+        azureAdOptions = azureAdOptionsValue.Value;
+
+        var credentials = SdkContext.AzureCredentialsFactory
+            .FromServicePrincipal(azureAdOptions.ClientId, azureAdOptions.ClientSecret,
+                azureAdOptions.TenantId, AzureEnvironment.AzureGlobalCloud);
+
+        azure = Microsoft.Azure.Management.Fluent.Azure
+            .Configure()
+            .Authenticate(credentials)
+            .WithSubscription(azureAdOptions.SubscriptionId);
     }
 
     public async Task<bool> CreateNamespaceAsync(string name)
@@ -182,6 +199,35 @@ public class AKSCrudService : IKubernetesCrud
         }
 
         return string.Empty;
+    }
+
+    public async Task<string> AssignDnsAsync(string uniqueDnsName, string ip,string rgName)
+    {
+        var ips = await azure.PublicIPAddresses.ListByResourceGroupAsync(rgName);
+        string ipId = string.Empty;
+        foreach (var publicIpAddress in ips)
+        {
+            if (publicIpAddress.IPAddress == ip)
+                ipId = publicIpAddress.Id;
+        }
+
+        if (string.IsNullOrEmpty(ipId))
+            return string.Empty;
+        
+        try
+        {
+            var currentIp = await azure.PublicIPAddresses.GetByIdAsync(ipId);
+            currentIp.Inner.DnsSettings.DomainNameLabel = uniqueDnsName;
+            currentIp.Update();
+        
+            currentIp= await azure.PublicIPAddresses.GetByIdAsync(ipId);
+            return currentIp.Fqdn;
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e.Message);
+            return string.Empty;
+        }
     }
 
     public async Task<bool> DeleteScenarioAsync(string name)

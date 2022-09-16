@@ -9,4 +9,5 @@ public static class Constants
     public const string ServiceTypeLoadBalancer = "LoadBalancer";
     public const string ServiceTypeClusterIp = "ClusterIp";
     public const string ServiceTypeNone = "None";
+    public const string KubernetesRGName = "MC_KubernetesRG_csaaks_westeurope";
 }

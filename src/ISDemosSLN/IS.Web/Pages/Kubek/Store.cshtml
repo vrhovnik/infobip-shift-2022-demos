@@ -8,7 +8,7 @@
 <h1>
     Store scenario
 </h1>
-<p class="text-info">Below is an example of scenario, how you could use API's in action.</p>
+<p class="text-info">Below is an example of scenario, how you could use Kubernetes API's in action.</p>
 
 @if (!string.IsNullOrEmpty(Model.InfoText))
 {
@@ -25,6 +25,22 @@
 @if (!string.IsNullOrEmpty(Model.StoreIp))
 {
     <p class="text-success font-weight-bolder mt-4 mb-4">Navigate to <a href="@Model.StoreIp">the store</a>.</p>
+    <form method="post">
+        <input type="hidden" asp-for="StoreIp">
+        <div class="form-group">
+            <label for="dnsName">DNS name</label>
+            <input asp-for="DnsName"
+                   class="form-control"
+                   id="dnsName"
+                   required="required"
+                   type="text">
+        </div>
+        <button asp-page-handler="CreateFQDN"
+                class="btn btn-primary mr-3"
+                type="submit">
+            Create FQDN and redirect there <i class="fas fa-arrow-right"></i>
+        </button>
+    </form>                                                                                                           
 }
 
 <form method="post">

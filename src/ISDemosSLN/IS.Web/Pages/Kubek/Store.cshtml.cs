@@ -1,3 +1,4 @@
+using IS.Web.Helpers;
 using IS.Web.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -44,11 +45,25 @@ public class StorePageModel : PageModel
         logger.LogInformation("Deleting scenario - the whole namespace {NamespaceName}", NamespaceName);
         await kubernetesCrud.DeleteScenarioAsync(NamespaceName);
         logger.LogInformation("Finish deleting scenario at {DateDeleted}", DateTime.Now);
-        InfoText = "Scenario has been deleted, check";
+        InfoText = "Scenario has been deleted, check namespaces";
         return RedirectToPage("/Kubek/ListNamespaces");
+    }
+    
+    public async Task<IActionResult> OnPostCreateFQDNAsync()
+    {
+        if (string.IsNullOrEmpty(StoreIp))
+        {
+            InfoText = "Store IP is required to create FQDN";
+            return RedirectToPage("/Kubek/Store");
+        }
+        logger.LogInformation("Deleting scenario - the whole namespace {NamespaceName}", NamespaceName);
+        var fqdn = await kubernetesCrud.AssignDnsAsync(DnsName, StoreIp, Constants.KubernetesRGName);
+        logger.LogInformation("Finish allocating IP {StoreIP} to {FQDN}", StoreIp, fqdn);
+        return Redirect(fqdn);
     }
 
     [BindProperty] public string NamespaceName { get; set; }
     [TempData] public string StoreIp { get; set; }
+    [TempData] public string DnsName { get; set; }
     [TempData] public string InfoText { get; set; }
 }
