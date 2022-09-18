@@ -8,10 +8,10 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="KubernetesClient" Version="8.0.68"/>
-        <PackageReference Include="Spectre.Console" Version="0.45.0"/>
-        <PackageReference Include="Bogus" Version="34.0.2"/>
-        <PackageReference Include="Bogus.Text" Version="34.0.2"/>
+        <PackageReference Include="KubernetesClient" Version="8.0.68" />
+        <PackageReference Include="Spectre.Console" Version="0.45.0" />
+        <PackageReference Include="Bogus" Version="34.0.2" />
+        <PackageReference Include="Bogus.Text" Version="34.0.2" />
     </ItemGroup>
 
 </Project>

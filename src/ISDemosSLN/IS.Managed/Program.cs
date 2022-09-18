@@ -27,7 +27,7 @@ await namespaceOps.CreateNamespaceAsync(nsName,
 
 await namespaceOps.ListAllNamespacesAsync();
 
-if (!AnsiConsole.Confirm($"Delete namespace {nsName}?")) await namespaceOps.DeleteNamespacesAsync(nsName);
+if (AnsiConsole.Confirm($"Delete namespace {nsName}?")) await namespaceOps.DeleteNamespacesAsync(nsName);
 
 HorizontalRule("02 - workloads operations");
 
@@ -45,7 +45,7 @@ await workloadOps.OutputPodsAsync(namespaceToCheckPods);
 
 var podImage = AnsiConsole.Ask<string>("What [green]image[/] would you like to use for creating the pod?");
 
-var podName = new Faker().Hacker.Abbreviation();
+var podName = new Faker().Hacker.Abbreviation().ToLowerInvariant();
 
 await workloadOps.CreatePodAsync(podName, podImage,
     new Dictionary<string, string> { { "app", "cli" }, { "conf", "InfobipShift" }, { "type", "pods" } },

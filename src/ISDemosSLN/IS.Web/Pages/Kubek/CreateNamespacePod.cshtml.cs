@@ -53,7 +53,7 @@ public class CreateNamespacePodPageModel : PageModel
         logger.LogInformation($"Received {imageName}");
         if (!string.IsNullOrEmpty(imageName))
         {
-            if (string.IsNullOrEmpty(PodName)) PodName = new Faker().Hacker.Abbreviation();
+            if (string.IsNullOrEmpty(PodName)) PodName = new Faker().Hacker.Abbreviation().ToLowerInvariant();
 
             if (!await kubernetesCrud.CreatePodAsync(NamespaceName, PodName, imageName))
             {

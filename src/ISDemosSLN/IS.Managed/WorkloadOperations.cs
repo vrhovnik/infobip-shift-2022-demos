@@ -10,6 +10,11 @@ namespace IS.Managed;
 
 public class WorkloadOperations : BaseKubernetesOps
 {
+    public delegate void WatchActionDelegate(WatchActionArgs args);
+
+    public event WatchActionDelegate PodStatusChanged;
+
+
     public WorkloadOperations(IKubernetes client) : base(client)
     {
     }
@@ -19,8 +24,19 @@ public class WorkloadOperations : BaseKubernetesOps
         var podlistResp = await client.CoreV1.ListNamespacedPodWithHttpMessagesAsync(namespaceToCheck, watch: true);
         using (podlistResp.Watch<V1Pod, V1PodList>((type, item) =>
                {
+                   if (PodStatusChanged != null)
+                   {
+                       var args = new WatchActionArgs(type.ToString(), item.Metadata.Name);
+                       PodStatusChanged(args);
+                       if (args.Cancel)
+                       {
+                           AnsiConsole.WriteLine("Event has been canceled");
+                           return;
+                       }
+                   }
+                   
                    AnsiConsole.WriteLine("Watching pods - kubectl get po --watch");
-                   AnsiConsole.Write($"[red]{type.ToString()}[/] with pod [green]{item.Metadata.Name}[/]");
+                   AnsiConsole.Write(new Markup($"[red]{type.ToString()}[/] with pod [green]{item.Metadata.Name}[/]"));
                    AnsiConsole.WriteLine("Waiting for next stats");
                }))
         {
