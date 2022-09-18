@@ -20,37 +20,52 @@
 </p>
 
 <form method="post">
-    <div class="form-group">
-        <label for="namespaceName">Namespace name</label>
-        <input asp-for="NamespaceName"
-               class="form-control"
-               id="namespaceName"
-               type="text">
-        <small class="form-text text-muted"
-               id="namespaceNameInfo">
-            Use all lowercase
-        </small>
+    <div class="mb-3 row">
+        <label class="col-sm-2 col-form-label"
+               for="namespaceName">
+            Namespace name
+        </label>
+        <div class="col-sm-10">
+            <input asp-for="NamespaceName"
+                   class="form-control"
+                   id="namespaceName"
+                   type="text">
+            <small class="form-text text-muted"
+                   id="namespaceNameInfo">
+                Use all lowercase
+            </small>
+        </div>
     </div>
-    <div class="form-group">
-        <label for="podName">Pod name</label>
-        <input asp-for="PodName"
-               class="form-control"
-               id="podName"
-               type="text">
+    <div class="mb-3 row">
+        <label class="col-sm-2 col-form-label"
+               for="podName">
+            Pod name
+        </label>
+        <div class="col-sm-10">
+            <input asp-for="PodName"
+                   class="form-control"
+                   id="podName"
+                   type="text">
+        </div>
     </div>
-    <div class="form-group">
-        <label for="sizeCombo">Select image to deploy to pod</label>
-        <select class="form-control"
-                id="sizeCombo"
-                name="image">
-            @foreach (var listItem in Model.Images)
-            {
-                <option value="@listItem.Name">@listItem.Name</option>
-            }
-        </select>
+    <div class="mb-3 row">
+        <label for="sizeCombo"
+               class="col-sm-2 col-form-label">
+            Select image to deploy to pod
+        </label>
+        <div class="col-sm-10">
+            <select class="form-control"
+                    id="sizeCombo"
+                    name="image">
+                @foreach (var listItem in Model.Images)
+                {
+                    <option value="@listItem.Name">@listItem.Name</option>
+                }
+            </select>
+        </div>
     </div>
     <button class="btn btn-primary"
             type="submit">
-        Create namespace and pod with selected image
+        Create namespace and pod with selected image <i class="fa-solid fa-check"></i>
     </button>
 </form>

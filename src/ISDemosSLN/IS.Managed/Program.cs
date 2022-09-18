@@ -56,6 +56,7 @@ await workloadOps.OutputPodsAsync(namespaceToCheckPods);
 HorizontalRule("03 - use watch option");
 
 await workloadOps.GetPodsWithWatchEnabledAsync(namespaceToCheckPods);
+
 //open new PWSH terminal and delete the pod kubectl delete pod nameofthepod -n namespacetocheckpods
 //return back here and press CTRL + C to continue
 
