@@ -2,7 +2,6 @@
 using k8s;
 using k8s.Models;
 using Spectre.Console;
-using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;

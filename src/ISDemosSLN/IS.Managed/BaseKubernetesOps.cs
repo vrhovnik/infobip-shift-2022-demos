@@ -7,10 +7,7 @@ public abstract class BaseKubernetesOps
 {
     internal readonly IKubernetes client;
 
-    protected BaseKubernetesOps(IKubernetes client)
-    {
-        this.client = client;
-    }
+    protected BaseKubernetesOps(IKubernetes client) => this.client = client;
 
     public async Task GetNodesMetricsAsync()
     {

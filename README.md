@@ -4,6 +4,8 @@ Demos for conference [Infobip Shift 2022](https://shift.infobip.com/), September
 talking about how to write your own kubectl with Csharp, explaining possible options and what is already done in Kubectl
 world to take advantage on integrating your workflow with Kubernetes as main tech provider behind the scenes.
 
+Slides are available [here](https://webeudatastorage.blob.core.windows.net/web/Write-your-own-kubectl-with-csharp.pdf), demo explanation below.
+
 <!-- TOC -->
 * [Infobip Shift 2022 conference -demos for session about building your own kubectl with C#](#infobip-shift-2022-conference--demos-for-session-about-building-your-own-kubectl-with-c#)
   * [Demo structure](#demo-structure)
